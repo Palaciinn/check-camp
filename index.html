@@ -470,6 +470,15 @@
                         console.log('ServiceWorker registration failed: ', err);
                     });
             });
+
+            // Automatically reload the page when a new service worker takes over
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    window.location.reload();
+                    refreshing = true;
+                }
+            });
         }
     </script>
 </body>
