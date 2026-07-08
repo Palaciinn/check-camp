@@ -40,6 +40,10 @@
     /* Remove tap flash on iOS */
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
@@ -50,7 +54,7 @@ body {
 
     /* Ensure no zooming or unwanted scroll horizontally */
     overflow-x: hidden;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -151,6 +155,7 @@ h3,
     padding-top: 16px;
     padding-bottom: calc(120px + env(safe-area-inset-bottom));
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Main Sections */
