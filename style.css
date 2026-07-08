@@ -213,6 +213,35 @@ h3,
     background-color: var(--bg-card);
 }
 
+/* --- Grid overflow safety net ---
+   By default, CSS Grid items have min-width: auto, which means their
+   minimum size is based on their content's min-content width. If any
+   content inside a grid cell can't shrink or wrap (e.g. a long
+   unbreakable word), the browser will grow that grid column beyond the
+   container, causing horizontal overflow that gets clipped by our
+   overflow-x: hidden rule on small screens. Forcing min-width: 0 lets
+   grid cells always shrink to fit their track. */
+.menu-cards-container,
+.menu-cards-container > * {
+    min-width: 0;
+}
+
+/* --- Icon font fallback safety net ---
+   Material Symbols renders icons via font ligatures (e.g. the text
+   "photo_library" becomes a single glyph). If that font fails to load
+   (poor/offline connection), the browser falls back to showing the raw
+   ligature text, which is a long unbreakable word that can force
+   layout overflow. Constraining the icon box and hiding overflow
+   prevents that fallback text from ever breaking the layout, even if
+   it's temporarily unreadable. */
+.material-symbols-rounded {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
 
 /* Bottom Tab Bar */
 .tab-bar {

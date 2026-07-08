@@ -1,4 +1,4 @@
-const CACHE_NAME = "check-camp-v1";
+const CACHE_NAME = "check-camp-v2";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -28,17 +28,34 @@ self.addEventListener("fetch", event => {
         }
         return fetch(event.request).then(
           function(response) {
-            // Check if we received a valid response
-            if(!response || response.status !== 200 || response.type !== "basic") {
+            // Google Fonts (fonts.googleapis.com / fonts.gstatic.com) are
+            // cross-origin, so their response.type is "cors" or "opaque",
+            // never "basic". The old check below skipped caching them
+            // entirely, which meant the Material Symbols icon font (used
+            // for every icon in the app) was never available offline or
+            // on poor connections. When it failed to load, icons fell
+            // back to raw ligature text (e.g. "photo_library"), an
+            // unbreakable long word that broke the home screen's grid
+            // layout and caused horizontal clipping on small screens.
+            //
+            // We still avoid caching real API/Supabase calls, but now
+            // also allow caching cross-origin ("cors"/"opaque")
+            // responses like Google Fonts so the icon font survives
+            // offline/poor-signal conditions.
+            var isCacheable =
+              response &&
+              (response.status === 200 || response.type === "opaque") &&
+              !event.request.url.includes("api") &&
+              !event.request.url.includes("supabase.co");
+
+            if (!isCacheable) {
               return response;
             }
+
             var responseToCache = response.clone();
             caches.open(CACHE_NAME)
               .then(function(cache) {
-                // Don"t cache api requests if any exist in the future
-                if (!event.request.url.includes("api")) {
-                  cache.put(event.request, responseToCache);
-                }
+                cache.put(event.request, responseToCache);
               });
             return response;
           }
