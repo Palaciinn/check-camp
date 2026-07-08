@@ -40,8 +40,17 @@
     /* Remove tap flash on iOS */
 }
 
+html, body {
+    overflow-x: hidden !important;
+    max-width: 100%;
+    width: 100%;
+    position: relative;
+}
+
 html {
     scroll-behavior: smooth;
+    /* Prevent iOS rubber-band scrolling on html level to avoid horizontal shifts */
+    overscroll-behavior-x: none;
 }
 
 body {
@@ -52,10 +61,8 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 
-    /* Ensure no zooming or unwanted scroll horizontally */
-    overflow-x: hidden;
-    width: 100%;
     height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height for iOS */
     display: flex;
     flex-direction: column;
 }
