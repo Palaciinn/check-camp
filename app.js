@@ -12,6 +12,7 @@ let usersList = [];
 let selectedUser = null;
 let isSettingPassword = false;
 let rawItems = [];
+let albumMedia = [];
 
 const DEFAULT_PERSONAL_ITEMS = [
     "Bañador",
@@ -121,6 +122,89 @@ const ItemsDB = {
     }
 };
 
+// --- Database Logic (Album Service) ---
+const ALBUM_BUCKET = 'album';
+// Soft client-side cap to avoid long hangs / failed uploads on the
+// "standard" Supabase upload endpoint, which is intended for smaller
+// files. Videos larger than this should ideally be compressed first.
+const ALBUM_MAX_FILE_MB = 100;
+
+const AlbumDB = {
+    async fetchMedia() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('album_media')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            console.error('Error fetching album media:', err.message);
+            return [];
+        }
+    },
+
+    // Uploads a single file to Storage, then registers it in album_media.
+    // Returns the created row (with a fresh id) on success, or null on failure.
+    async uploadFile(file, userId) {
+        try {
+            const ext = (file.name.split('.').pop() || 'dat').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+            const filePath = `${userId || 'anon'}/${uniqueName}`;
+            const fileType = file.type.startsWith('video') ? 'video' : 'image';
+
+            const { error: uploadError } = await supabaseClient
+                .storage
+                .from(ALBUM_BUCKET)
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false,
+                    contentType: file.type || undefined
+                });
+
+            if (uploadError) throw uploadError;
+
+            const { data: insertData, error: insertError } = await supabaseClient
+                .from('album_media')
+                .insert([{
+                    file_path: filePath,
+                    file_type: fileType,
+                    file_name: file.name,
+                    uploaded_by: userId
+                }])
+                .select();
+
+            if (insertError) throw insertError;
+
+            return insertData && insertData[0] ? insertData[0] : null;
+        } catch (err) {
+            console.error('Error uploading media:', err.message);
+            return null;
+        }
+    },
+
+    getPublicUrl(filePath) {
+        const { data } = supabaseClient.storage.from(ALBUM_BUCKET).getPublicUrl(filePath);
+        return data ? data.publicUrl : '';
+    },
+
+    async deleteMedia(mediaId, filePath) {
+        try {
+            await supabaseClient.storage.from(ALBUM_BUCKET).remove([filePath]);
+            const { error } = await supabaseClient
+                .from('album_media')
+                .delete()
+                .eq('id', mediaId);
+            if (error) throw error;
+            return true;
+        } catch (err) {
+            console.error('Error deleting media:', err.message);
+            return false;
+        }
+    }
+};
+
 // --- UI Logic ---
 const UI = {
     elements: {
@@ -156,7 +240,29 @@ const UI = {
         customConfirmOverlay: document.getElementById('custom-confirm-overlay'),
         customConfirmMessage: document.getElementById('custom-confirm-message'),
         customConfirmCancel: document.getElementById('custom-confirm-cancel'),
-        customConfirmAccept: document.getElementById('custom-confirm-accept')
+        customConfirmAccept: document.getElementById('custom-confirm-accept'),
+
+        // Album
+        albumGrid: document.getElementById('album-grid'),
+        albumEmptyState: document.getElementById('album-empty-state'),
+        albumFileInput: document.getElementById('album-file-input'),
+        albumFabUpload: document.getElementById('album-fab-upload'),
+        albumUploadProgress: document.getElementById('album-upload-progress'),
+        albumUploadProgressFill: document.getElementById('album-upload-progress-fill'),
+        albumUploadProgressText: document.getElementById('album-upload-progress-text'),
+
+        // Album Lightbox
+        albumLightbox: document.getElementById('album-lightbox'),
+        albumLightboxStage: document.getElementById('album-lightbox-stage'),
+        albumLightboxMediaWrap: document.getElementById('album-lightbox-media-wrap'),
+        albumLightboxClose: document.getElementById('album-lightbox-close'),
+        albumLightboxDelete: document.getElementById('album-lightbox-delete'),
+        albumLightboxPrev: document.getElementById('album-lightbox-prev'),
+        albumLightboxNext: document.getElementById('album-lightbox-next'),
+        albumLightboxAvatar: document.getElementById('album-lightbox-avatar'),
+        albumLightboxUsername: document.getElementById('album-lightbox-username'),
+        albumLightboxDate: document.getElementById('album-lightbox-date'),
+        albumLightboxCounter: document.getElementById('album-lightbox-counter')
     },
 
     customAlert(message) {
@@ -234,11 +340,48 @@ const UI = {
         }
 
         if (this.elements.menuAlbumBtn) {
-            this.elements.menuAlbumBtn.addEventListener('click', () => this.showSubSection('section-construction'));
+            this.elements.menuAlbumBtn.addEventListener('click', () => {
+                this.showSubSection('section-album');
+                this.loadAlbum();
+            });
         }
 
         if (this.elements.menuPagosBtn) {
             this.elements.menuPagosBtn.addEventListener('click', () => this.showSubSection('section-construction'));
+        }
+
+        // Album events
+        if (this.elements.albumFabUpload) {
+            this.elements.albumFabUpload.addEventListener('click', () => {
+                if (this.elements.albumFileInput) this.elements.albumFileInput.click();
+            });
+        }
+
+        if (this.elements.albumFileInput) {
+            this.elements.albumFileInput.addEventListener('change', (e) => {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                    this.handleAlbumUpload(files);
+                }
+                // Reset so selecting the same file(s) again re-triggers change
+                e.target.value = '';
+            });
+        }
+
+        if (this.elements.albumLightboxClose) {
+            this.elements.albumLightboxClose.addEventListener('click', () => AlbumLightbox.close());
+        }
+
+        if (this.elements.albumLightboxPrev) {
+            this.elements.albumLightboxPrev.addEventListener('click', () => AlbumLightbox.go(-1));
+        }
+
+        if (this.elements.albumLightboxNext) {
+            this.elements.albumLightboxNext.addEventListener('click', () => AlbumLightbox.go(1));
+        }
+
+        if (this.elements.albumLightboxDelete) {
+            this.elements.albumLightboxDelete.addEventListener('click', () => AlbumLightbox.deleteCurrent());
         }
 
         if (this.elements.menuInstallBtn) {
@@ -1411,6 +1554,10 @@ const UI = {
                 this.elements.fabAdd.style.display = 'none';
             }
         }
+
+        if (this.elements.albumFabUpload) {
+            this.elements.albumFabUpload.style.display = sectionId === 'section-album' ? 'flex' : 'none';
+        }
     },
 
     showHomeSection() {
@@ -1426,12 +1573,447 @@ const UI = {
             this.elements.fabAdd.style.display = 'none';
         }
 
+        if (this.elements.albumFabUpload) {
+            this.elements.albumFabUpload.style.display = 'none';
+        }
+
         if (this.elements.progressBar) {
             this.elements.progressBar.style.display = 'none';
         }
 
         this.elements.tabButtons.forEach(btn => btn.classList.remove('active'));
         if (this.elements.tabButtons[0]) this.elements.tabButtons[0].classList.add('active');
+    },
+
+    // --- Album ---
+    async loadAlbum() {
+        if (this.elements.albumGrid) {
+            this.elements.albumGrid.innerHTML = '<p class="placeholder-text">Cargando recuerdos...</p>';
+        }
+        albumMedia = await AlbumDB.fetchMedia();
+        this.renderAlbumGrid();
+    },
+
+    renderAlbumGrid() {
+        const grid = this.elements.albumGrid;
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        if (this.elements.albumEmptyState) {
+            this.elements.albumEmptyState.style.display = albumMedia.length === 0 ? 'flex' : 'none';
+        }
+
+        albumMedia.forEach((media, index) => {
+            grid.appendChild(this.createAlbumThumbnail(media, index));
+        });
+    },
+
+    createAlbumThumbnail(media, index) {
+        const item = document.createElement('div');
+        item.className = 'album-item';
+
+        const url = AlbumDB.getPublicUrl(media.file_path);
+
+        if (media.file_type === 'video') {
+            const video = document.createElement('video');
+            video.src = url;
+            video.muted = true;
+            video.playsInline = true;
+            video.preload = 'metadata';
+            item.appendChild(video);
+
+            const playIcon = document.createElement('span');
+            playIcon.className = 'material-symbols-rounded album-item-play-icon';
+            playIcon.textContent = 'play_circle';
+            item.appendChild(playIcon);
+        } else {
+            const img = document.createElement('img');
+            img.src = url;
+            img.loading = 'lazy';
+            img.alt = media.file_name || 'Recuerdo del álbum';
+            item.appendChild(img);
+        }
+
+        const uploader = usersList.find(u => u.id === media.uploaded_by);
+        if (uploader) {
+            const avatarBadge = document.createElement('div');
+            avatarBadge.className = 'album-item-avatar';
+            const firstName = uploader.name ? uploader.name.split(' ')[0] : 'User';
+            const avatarImg = document.createElement('img');
+            avatarImg.src = `avatars/Avatar${firstName}.png`;
+            avatarImg.alt = firstName;
+            avatarImg.onerror = () => {
+                avatarImg.style.display = 'none';
+                avatarBadge.textContent = firstName.charAt(0).toUpperCase();
+            };
+            avatarBadge.appendChild(avatarImg);
+            item.appendChild(avatarBadge);
+        }
+
+        item.addEventListener('click', () => AlbumLightbox.open(index));
+
+        return item;
+    },
+
+    async handleAlbumUpload(fileList) {
+        if (!selectedUser) {
+            await this.customAlert('Debes iniciar sesión para subir archivos.');
+            return;
+        }
+
+        const files = Array.from(fileList).filter(f => {
+            const isMedia = f.type.startsWith('image/') || f.type.startsWith('video/');
+            const isWithinLimit = f.size <= ALBUM_MAX_FILE_MB * 1024 * 1024;
+            return isMedia && isWithinLimit;
+        });
+
+        if (files.length === 0) {
+            await this.customAlert('Selecciona imágenes o vídeos válidos (máx. ' + ALBUM_MAX_FILE_MB + 'MB cada uno).');
+            return;
+        }
+
+        if (this.elements.albumUploadProgress) {
+            this.elements.albumUploadProgress.classList.remove('hidden');
+        }
+
+        let completed = 0;
+        let failed = 0;
+        const total = files.length;
+        this.updateAlbumUploadProgress(completed, total);
+
+        // Sequential upload: keeps things simple and predictable on
+        // shaky camping wifi, and avoids overwhelming the connection
+        // with many parallel uploads at once.
+        for (const file of files) {
+            const result = await AlbumDB.uploadFile(file, selectedUser.id);
+            if (result) {
+                albumMedia.unshift(result);
+                this.renderAlbumGrid();
+            } else {
+                failed++;
+            }
+            completed++;
+            this.updateAlbumUploadProgress(completed, total);
+        }
+
+        if (this.elements.albumUploadProgress) {
+            this.elements.albumUploadProgress.classList.add('hidden');
+        }
+
+        if (failed > 0) {
+            await this.customAlert(`Se subieron ${total - failed} de ${total} archivos. ${failed} no se pudieron subir, revisa tu conexión e inténtalo de nuevo.`);
+        }
+    },
+
+    updateAlbumUploadProgress(completed, total) {
+        if (this.elements.albumUploadProgressText) {
+            this.elements.albumUploadProgressText.textContent = `Subiendo ${completed}/${total}`;
+        }
+        if (this.elements.albumUploadProgressFill) {
+            const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+            this.elements.albumUploadProgressFill.style.width = pct + '%';
+        }
+    }
+};
+
+// --- Album Lightbox (fullscreen viewer: swipe, pinch-zoom, double-tap) ---
+const AlbumLightbox = {
+    index: 0,
+    scale: 1,
+    translateX: 0,
+    translateY: 0,
+    startDistance: 0,
+    startScale: 1,
+    startTouches: null,
+    isPanning: false,
+    panStartX: 0,
+    panStartY: 0,
+    panOriginX: 0,
+    panOriginY: 0,
+    swipeStartX: 0,
+    swipeStartY: 0,
+    swipeCurrentX: 0,
+    isSwiping: false,
+    lastTapTime: 0,
+    lastTapX: 0,
+    lastTapY: 0,
+    boundInit: false,
+
+    open(index) {
+        if (!albumMedia.length) return;
+        this.index = index;
+        this.resetZoom();
+        UI.elements.albumLightbox.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        this.renderSlide();
+        this.bindGestures();
+    },
+
+    close() {
+        UI.elements.albumLightbox.classList.add('hidden');
+        document.body.style.overflow = '';
+        const wrap = UI.elements.albumLightboxMediaWrap;
+        // Stop any playing video so audio doesn't keep running in the background
+        const video = wrap ? wrap.querySelector('video') : null;
+        if (video) video.pause();
+    },
+
+    go(delta) {
+        const newIndex = this.index + delta;
+        if (newIndex < 0 || newIndex >= albumMedia.length) return;
+        this.index = newIndex;
+        this.resetZoom();
+        this.renderSlide();
+    },
+
+    resetZoom() {
+        this.scale = 1;
+        this.translateX = 0;
+        this.translateY = 0;
+        UI.elements.albumLightbox.classList.remove('zoomed');
+        this.applyTransform();
+    },
+
+    applyTransform() {
+        const wrap = UI.elements.albumLightboxMediaWrap;
+        if (!wrap) return;
+        wrap.style.transform = `translate(${this.translateX}px, ${this.translateY}px) scale(${this.scale})`;
+    },
+
+    renderSlide() {
+        const media = albumMedia[this.index];
+        if (!media) return;
+
+        const wrap = UI.elements.albumLightboxMediaWrap;
+        wrap.innerHTML = '';
+
+        const url = AlbumDB.getPublicUrl(media.file_path);
+
+        if (media.file_type === 'video') {
+            const video = document.createElement('video');
+            video.src = url;
+            video.controls = true;
+            video.playsInline = true;
+            video.autoplay = false;
+            wrap.appendChild(video);
+        } else {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = media.file_name || 'Recuerdo del álbum';
+            img.draggable = false;
+            wrap.appendChild(img);
+        }
+
+        // Meta (who uploaded it + when)
+        const uploader = usersList.find(u => u.id === media.uploaded_by);
+        const avatarEl = UI.elements.albumLightboxAvatar;
+        const nameEl = UI.elements.albumLightboxUsername;
+        const dateEl = UI.elements.albumLightboxDate;
+
+        if (avatarEl) avatarEl.innerHTML = '';
+        if (uploader) {
+            const firstName = uploader.name ? uploader.name.split(' ')[0] : 'User';
+            if (nameEl) nameEl.textContent = firstName;
+            if (avatarEl) {
+                const img = document.createElement('img');
+                img.src = `avatars/Avatar${firstName}.png`;
+                img.alt = firstName;
+                img.onerror = () => {
+                    img.style.display = 'none';
+                    avatarEl.textContent = firstName.charAt(0).toUpperCase();
+                };
+                avatarEl.appendChild(img);
+            }
+        } else if (nameEl) {
+            nameEl.textContent = 'Alguien del grupo';
+        }
+
+        if (dateEl && media.created_at) {
+            const d = new Date(media.created_at);
+            dateEl.textContent = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        }
+
+        // Only the uploader (or fallback: everyone, since this is a shared
+        // trusted group album) can delete. We show the delete button to the
+        // uploader; feel free to remove this check if you'd rather let
+        // anyone delete any photo.
+        if (UI.elements.albumLightboxDelete) {
+            UI.elements.albumLightboxDelete.style.display =
+                (selectedUser && media.uploaded_by === selectedUser.id) ? 'flex' : 'none';
+        }
+
+        if (UI.elements.albumLightboxCounter) {
+            UI.elements.albumLightboxCounter.textContent = `${this.index + 1} / ${albumMedia.length}`;
+        }
+
+        if (UI.elements.albumLightboxPrev) {
+            UI.elements.albumLightboxPrev.style.visibility = this.index === 0 ? 'hidden' : 'visible';
+        }
+        if (UI.elements.albumLightboxNext) {
+            UI.elements.albumLightboxNext.style.visibility = this.index === albumMedia.length - 1 ? 'hidden' : 'visible';
+        }
+    },
+
+    async deleteCurrent() {
+        const media = albumMedia[this.index];
+        if (!media) return;
+
+        const confirmed = await UI.customConfirm('¿Seguro que quieres borrar este recuerdo? Esta acción no se puede deshacer.');
+        if (!confirmed) return;
+
+        const success = await AlbumDB.deleteMedia(media.id, media.file_path);
+        if (success) {
+            albumMedia.splice(this.index, 1);
+            UI.renderAlbumGrid();
+            if (albumMedia.length === 0) {
+                this.close();
+            } else {
+                this.index = Math.min(this.index, albumMedia.length - 1);
+                this.resetZoom();
+                this.renderSlide();
+            }
+        } else {
+            await UI.customAlert('No se pudo borrar el archivo. Inténtalo de nuevo.');
+        }
+    },
+
+    // Gesture handling: pinch-to-zoom, double-tap-to-zoom, drag-to-pan
+    // while zoomed, and swipe-to-navigate while not zoomed.
+    bindGestures() {
+        if (this.boundInit) return;
+        this.boundInit = true;
+
+        const stage = UI.elements.albumLightboxStage;
+        if (!stage) return;
+
+        const getDistance = (touches) => {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
+        const getMidpoint = (touches) => ({
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2
+        });
+
+        stage.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                this.isSwiping = false;
+                this.startDistance = getDistance(e.touches);
+                this.startScale = this.scale;
+            } else if (e.touches.length === 1) {
+                const touch = e.touches[0];
+
+                // Double-tap detection
+                const now = Date.now();
+                const dx = Math.abs(touch.clientX - this.lastTapX);
+                const dy = Math.abs(touch.clientY - this.lastTapY);
+                if (now - this.lastTapTime < 300 && dx < 30 && dy < 30) {
+                    this.handleDoubleTap(touch.clientX, touch.clientY, stage);
+                    this.lastTapTime = 0;
+                    return;
+                }
+                this.lastTapTime = now;
+                this.lastTapX = touch.clientX;
+                this.lastTapY = touch.clientY;
+
+                if (this.scale > 1) {
+                    this.isPanning = true;
+                    this.panStartX = touch.clientX;
+                    this.panStartY = touch.clientY;
+                    this.panOriginX = this.translateX;
+                    this.panOriginY = this.translateY;
+                } else {
+                    this.isSwiping = true;
+                    this.swipeStartX = touch.clientX;
+                    this.swipeStartY = touch.clientY;
+                    this.swipeCurrentX = touch.clientX;
+                }
+            }
+        }, { passive: true });
+
+        stage.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const newDistance = getDistance(e.touches);
+                const ratio = newDistance / (this.startDistance || newDistance);
+                this.scale = Math.min(4, Math.max(1, this.startScale * ratio));
+                UI.elements.albumLightbox.classList.toggle('zoomed', this.scale > 1.02);
+                this.applyTransform();
+            } else if (this.isPanning && e.touches.length === 1) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                this.translateX = this.panOriginX + (touch.clientX - this.panStartX);
+                this.translateY = this.panOriginY + (touch.clientY - this.panStartY);
+                this.applyTransform();
+            } else if (this.isSwiping && e.touches.length === 1) {
+                const touch = e.touches[0];
+                this.swipeCurrentX = touch.clientX;
+                const deltaX = this.swipeCurrentX - this.swipeStartX;
+                const deltaY = touch.clientY - this.swipeStartY;
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    const wrap = UI.elements.albumLightboxMediaWrap;
+                    if (wrap) wrap.style.transform = `translateX(${deltaX}px)`;
+                }
+            }
+        }, { passive: false });
+
+        stage.addEventListener('touchend', (e) => {
+            if (this.isPanning) {
+                this.isPanning = false;
+                // Snap zoom back to 1x if user pinched back down close to it
+                if (this.scale <= 1.02) {
+                    this.resetZoom();
+                }
+                return;
+            }
+
+            if (this.isSwiping) {
+                this.isSwiping = false;
+                const deltaX = this.swipeCurrentX - this.swipeStartX;
+                const wrap = UI.elements.albumLightboxMediaWrap;
+
+                if (Math.abs(deltaX) > 70) {
+                    if (deltaX < 0 && this.index < albumMedia.length - 1) {
+                        this.go(1);
+                    } else if (deltaX > 0 && this.index > 0) {
+                        this.go(-1);
+                    } else if (wrap) {
+                        wrap.style.transform = 'translateX(0)';
+                    }
+                } else if (wrap) {
+                    wrap.style.transform = 'translateX(0)';
+                }
+            }
+
+            // Multi-touch ended, one finger may remain: reset pinch baseline
+            if (e.touches.length < 2) {
+                this.startDistance = 0;
+            }
+        });
+
+        // Desktop/mouse fallback for double-click zoom (handy when testing
+        // in a browser rather than on a phone)
+        stage.addEventListener('dblclick', (e) => {
+            this.handleDoubleTap(e.clientX, e.clientY, stage);
+        });
+    },
+
+    handleDoubleTap(clientX, clientY, stage) {
+        if (this.scale > 1) {
+            this.resetZoom();
+            return;
+        }
+        const rect = stage.getBoundingClientRect();
+        const originX = clientX - rect.left - rect.width / 2;
+        const originY = clientY - rect.top - rect.height / 2;
+
+        this.scale = 2.5;
+        this.translateX = -originX * (this.scale - 1) / this.scale;
+        this.translateY = -originY * (this.scale - 1) / this.scale;
+        UI.elements.albumLightbox.classList.add('zoomed');
+        this.applyTransform();
     }
 };
 

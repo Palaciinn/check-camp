@@ -142,7 +142,31 @@
             </div>
         </section>
 
-        <!-- Construction Section -->
+        <!-- Album Section -->
+        <section id="section-album" class="tab-section">
+            <div class="album-header">
+                <h2 style="margin-bottom: 0;">Álbum</h2>
+                <span class="placeholder-text" style="font-size: 13px; padding: 0;">Recuerdos compartidos</span>
+            </div>
+
+            <input type="file" id="album-file-input" accept="image/*,video/*" multiple style="display: none;">
+
+            <div id="album-upload-progress" class="album-upload-progress hidden">
+                <div class="progress-track" style="flex: 1;">
+                    <div class="progress-fill" id="album-upload-progress-fill" style="width: 0%;"></div>
+                </div>
+                <span id="album-upload-progress-text" class="progress-text" style="min-width: fit-content;">Subiendo 0/0</span>
+            </div>
+
+            <div id="album-grid" class="album-grid"></div>
+
+            <div id="album-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
+                <span class="material-symbols-rounded" style="font-size: 48px; color: var(--text-color); opacity: 0.3; margin-bottom: 12px;">photo_library</span>
+                <p class="placeholder-text" style="padding: 0;">Aún no hay recuerdos. ¡Sube la primera foto o vídeo!</p>
+            </div>
+        </section>
+
+        <!-- Pagos Section -->
         <section id="section-construction" class="tab-section">
             <div
                 style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; padding: 24px;">
@@ -294,6 +318,11 @@
             <span class="material-symbols-rounded">add</span>
             Añadir Artículo
         </button>
+
+        <button id="album-fab-upload" class="fab-button" style="display: none;">
+            <span class="material-symbols-rounded">add_photo_alternate</span>
+            Subir
+        </button>
     </main>
 
     <!-- Bottom Tab Bar -->
@@ -393,6 +422,40 @@
                 <button id="custom-confirm-accept" class="btn-primary" style="flex: 1; background-color: var(--alert);">Eliminar</button>
             </div>
         </div>
+    </div>
+
+    <!-- Album Lightbox Viewer -->
+    <div id="album-lightbox" class="album-lightbox hidden">
+        <div class="album-lightbox-top">
+            <div class="album-lightbox-meta">
+                <div class="album-lightbox-avatar" id="album-lightbox-avatar"></div>
+                <div>
+                    <div id="album-lightbox-username" class="album-lightbox-username"></div>
+                    <div id="album-lightbox-date" class="album-lightbox-date"></div>
+                </div>
+            </div>
+            <div class="album-lightbox-actions">
+                <button id="album-lightbox-delete" class="album-lightbox-icon-btn" style="display: none;">
+                    <span class="material-symbols-rounded">delete</span>
+                </button>
+                <button id="album-lightbox-close" class="album-lightbox-icon-btn">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="album-lightbox-stage" class="album-lightbox-stage">
+            <div id="album-lightbox-media-wrap" class="album-lightbox-media-wrap"></div>
+        </div>
+
+        <button id="album-lightbox-prev" class="album-lightbox-arrow album-lightbox-arrow-left">
+            <span class="material-symbols-rounded">chevron_left</span>
+        </button>
+        <button id="album-lightbox-next" class="album-lightbox-arrow album-lightbox-arrow-right">
+            <span class="material-symbols-rounded">chevron_right</span>
+        </button>
+
+        <div id="album-lightbox-counter" class="album-lightbox-counter"></div>
     </div>
 
     <script src="app.js"></script>
