@@ -422,11 +422,48 @@ const UI = {
         this.bindEvents();
         this.startCountdown();
 
-        // Hide splash screen smoothly
+        // Hide splash screen smoothly after avatars load
         if (this.elements.appSplashScreen) {
-            setTimeout(() => {
-                this.elements.appSplashScreen.classList.add('hidden');
-            }, 500); // 500ms min delay for smooth effect
+            const avatarImgs = Array.from(this.elements.usersGrid.querySelectorAll('img'));
+            
+            const hideSplash = () => {
+                setTimeout(() => {
+                    this.elements.appSplashScreen.classList.add('hidden');
+                }, 400); // Pequeño extra delay para asegurar render
+            };
+
+            if (avatarImgs.length === 0) {
+                hideSplash();
+            } else {
+                let loadedCount = 0;
+                let hasFired = false;
+
+                const checkDone = () => {
+                    if (loadedCount >= avatarImgs.length && !hasFired) {
+                        hasFired = true;
+                        hideSplash();
+                    }
+                };
+
+                avatarImgs.forEach(img => {
+                    if (img.complete) {
+                        loadedCount++;
+                    } else {
+                        img.addEventListener('load', () => { loadedCount++; checkDone(); }, { once: true });
+                        img.addEventListener('error', () => { loadedCount++; checkDone(); }, { once: true });
+                    }
+                });
+                
+                checkDone();
+                
+                // Fallback de seguridad (máximo 4 segundos)
+                setTimeout(() => {
+                    if (!hasFired) {
+                        hasFired = true;
+                        hideSplash();
+                    }
+                }, 4000);
+            }
         }
     },
 
