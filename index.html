@@ -39,9 +39,10 @@
             <span class="material-symbols-rounded splash-icon">camping</span>
             <h1>Check<span class="text-accent">&</span>Camp</h1>
         </div>
-        
+
         <div class="splash-progress-container">
-            <p class="splash-message">Se están descargando los recursos de la app. Esta primera carga puede tardar unos minutos.</p>
+            <p class="splash-message">Se están descargando los recursos de la app. Esta primera carga puede tardar unos
+                segundos.</p>
             <div class="splash-progress-bar-bg">
                 <div id="splash-progress-bar" class="splash-progress-bar-fill"></div>
             </div>
@@ -129,14 +130,16 @@
                     <p style="margin: 4px 0 0 0; opacity: 0.6; font-size: 13px; font-family: var(--font-body);">Gastos
                     </p>
                 </button>
-                
+
                 <!-- Install Guide Card -->
                 <button id="menu-install-btn" class="card menu-card"
                     style="border: 1px solid var(--border-color); text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: white; color: var(--text-color); width: 100%; padding: 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); grid-column: 1 / -1;">
                     <span class="material-symbols-rounded"
                         style="font-size: 36px; margin-bottom: 8px; color: var(--secondary);">install_mobile</span>
-                    <h2 style="margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0;">Cómo instalar la aplicación</h2>
-                    <p style="margin: 4px 0 0 0; opacity: 0.6; font-size: 13px; font-family: var(--font-body);">Añadir a inicio</p>
+                    <h2 style="margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0;">Cómo instalar la
+                        aplicación</h2>
+                    <p style="margin: 4px 0 0 0; opacity: 0.6; font-size: 13px; font-family: var(--font-body);">Añadir a
+                        inicio</p>
                 </button>
             </div>
         </section>
@@ -177,7 +180,8 @@
                 <div class="progress-track" style="flex: 1;">
                     <div class="progress-fill" id="album-upload-progress-fill" style="width: 0%;"></div>
                 </div>
-                <span id="album-upload-progress-text" class="progress-text" style="min-width: fit-content;">Subiendo 0/0</span>
+                <span id="album-upload-progress-text" class="progress-text" style="min-width: fit-content;">Subiendo
+                    0/0</span>
             </div>
 
             <!-- "Todas" View -->
@@ -187,17 +191,22 @@
                     <button class="sort-pill" data-sort="likes">Más likeadas</button>
                 </div>
                 <div id="album-grid" class="album-grid"></div>
-                <div id="album-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
-                    <span class="material-symbols-rounded" style="font-size: 48px; color: var(--text-color); opacity: 0.3; margin-bottom: 12px;">photo_library</span>
-                    <p class="placeholder-text" style="padding: 0;">Aún no hay recuerdos. ¡Sube la primera foto o vídeo!</p>
+                <div id="album-empty-state"
+                    style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
+                    <span class="material-symbols-rounded"
+                        style="font-size: 48px; color: var(--text-color); opacity: 0.3; margin-bottom: 12px;">photo_library</span>
+                    <p class="placeholder-text" style="padding: 0;">Aún no hay recuerdos. ¡Sube la primera foto o vídeo!
+                    </p>
                 </div>
             </div>
 
             <!-- "Personas" View -->
             <div id="album-view-people" class="album-view">
                 <div id="album-people-grid" class="album-people-grid"></div>
-                <div id="album-people-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
-                    <span class="material-symbols-rounded" style="font-size: 48px; color: var(--text-color); opacity: 0.3; margin-bottom: 12px;">group</span>
+                <div id="album-people-empty-state"
+                    style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
+                    <span class="material-symbols-rounded"
+                        style="font-size: 48px; color: var(--text-color); opacity: 0.3; margin-bottom: 12px;">group</span>
                     <p class="placeholder-text" style="padding: 0;">Nadie ha subido recuerdos aún.</p>
                 </div>
             </div>
@@ -205,7 +214,8 @@
             <!-- Individual Person Detail View (Slide-in) -->
             <div id="album-person-detail-view" class="album-detail-view">
                 <div class="album-detail-header">
-                    <button id="album-detail-back" style="background: none; border: none; color: var(--text-color); cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; margin-left: -8px;">
+                    <button id="album-detail-back"
+                        style="background: none; border: none; color: var(--text-color); cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; margin-left: -8px;">
                         <span class="material-symbols-rounded">arrow_back</span>
                     </button>
                     <div class="album-detail-user">
@@ -235,37 +245,46 @@
         <!-- Install Guide Section -->
         <section id="section-install" class="tab-section">
             <h2 style="margin-bottom: 24px;">Cómo instalar la aplicación</h2>
-            
-            <div class="card event-card" style="margin-bottom: 16px; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+
+            <div class="card event-card"
+                style="margin-bottom: 16px; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
                     <span class="material-symbols-rounded" style="color: var(--primary);">phone_iphone</span>
                     <h3 style="font-size: 18px; margin: 0; font-weight: 700;">Guía para iOS (iPhone)</h3>
                 </div>
-                <ol style="padding-left: 20px; font-size: 15px; line-height: 1.6; color: var(--text-color); margin-bottom: 16px;">
+                <ol
+                    style="padding-left: 20px; font-size: 15px; line-height: 1.6; color: var(--text-color); margin-bottom: 16px;">
                     <li>Abre esta página en <strong>Safari</strong>.</li>
-                    <li>Toca el botón <strong>Compartir</strong> <span class="material-symbols-rounded" style="font-size: 18px; vertical-align: middle;">ios_share</span> en la barra inferior.</li>
+                    <li>Toca el botón <strong>Compartir</strong> <span class="material-symbols-rounded"
+                            style="font-size: 18px; vertical-align: middle;">ios_share</span> en la barra inferior.</li>
                     <li>Desplázate hacia abajo y selecciona <strong>"Añadir a la pantalla de inicio"</strong>.</li>
                     <li>Toca en <strong>Añadir</strong> arriba a la derecha.</li>
                 </ol>
                 <p style="font-size: 14px; opacity: 0.8; margin-top: 16px;">
-                    ¿Problemas? <a href="https://support.apple.com/es-es/guide/iphone/iphea86e5236/ios" target="_blank" style="color: var(--secondary); text-decoration: none; font-weight: bold;">Ver guía oficial de Apple</a>
+                    ¿Problemas? <a href="https://support.apple.com/es-es/guide/iphone/iphea86e5236/ios" target="_blank"
+                        style="color: var(--secondary); text-decoration: none; font-weight: bold;">Ver guía oficial de
+                        Apple</a>
                 </p>
             </div>
 
-            <div class="card event-card" style="margin-bottom: 24px; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <div class="card event-card"
+                style="margin-bottom: 24px; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
                     <span class="material-symbols-rounded" style="color: var(--accent-orange);">android</span>
                     <h3 style="font-size: 18px; margin: 0; font-weight: 700;">Guía para Android</h3>
                 </div>
                 <ol style="padding-left: 20px; font-size: 15px; line-height: 1.6; color: var(--text-color);">
                     <li>Abre esta página en <strong>Chrome</strong>.</li>
-                    <li>Toca el menú de tres puntos <span class="material-symbols-rounded" style="font-size: 18px; vertical-align: middle;">more_vert</span> arriba a la derecha.</li>
-                    <li>Selecciona <strong>"Añadir a la pantalla de inicio"</strong> o <strong>"Instalar aplicación"</strong>.</li>
+                    <li>Toca el menú de tres puntos <span class="material-symbols-rounded"
+                            style="font-size: 18px; vertical-align: middle;">more_vert</span> arriba a la derecha.</li>
+                    <li>Selecciona <strong>"Añadir a la pantalla de inicio"</strong> o <strong>"Instalar
+                            aplicación"</strong>.</li>
                     <li>Sigue las instrucciones en pantalla.</li>
                 </ol>
             </div>
 
-            <a href="https://wa.me/34633021598?text=Angel%2C%20no%20se%20instalar%20la%20app%20%3A(" target="_blank" class="btn-primary"
+            <a href="https://wa.me/34633021598?text=Angel%2C%20no%20se%20instalar%20la%20app%20%3A(" target="_blank"
+                class="btn-primary"
                 style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background-color: white; color: var(--primary); border: 2px solid var(--primary); font-weight: bold;">
                 <span class="material-symbols-rounded">help</span>
                 Necesito ayuda
@@ -459,9 +478,12 @@
     <!-- Custom Alert Modal -->
     <div id="custom-alert-overlay" class="modal-overlay hidden">
         <div class="modal-card" style="text-align: center; max-width: 320px;">
-            <span class="material-symbols-rounded" style="font-size: 48px; color: var(--accent-orange); margin-bottom: 16px;">info</span>
+            <span class="material-symbols-rounded"
+                style="font-size: 48px; color: var(--accent-orange); margin-bottom: 16px;">info</span>
             <h3 style="margin-bottom: 12px;">Aviso</h3>
-            <p id="custom-alert-message" style="margin-bottom: 24px; color: var(--text-color); opacity: 0.8; font-size: 15px; line-height: 1.5;"></p>
+            <p id="custom-alert-message"
+                style="margin-bottom: 24px; color: var(--text-color); opacity: 0.8; font-size: 15px; line-height: 1.5;">
+            </p>
             <button id="custom-alert-btn" class="btn-primary" style="width: 100%;">Entendido</button>
         </div>
     </div>
@@ -469,12 +491,17 @@
     <!-- Custom Confirm Modal -->
     <div id="custom-confirm-overlay" class="modal-overlay hidden">
         <div class="modal-card" style="text-align: center; max-width: 320px;">
-            <span class="material-symbols-rounded" style="font-size: 48px; color: var(--alert); margin-bottom: 16px;">warning</span>
+            <span class="material-symbols-rounded"
+                style="font-size: 48px; color: var(--alert); margin-bottom: 16px;">warning</span>
             <h3 style="margin-bottom: 12px;">¿Estás seguro?</h3>
-            <p id="custom-confirm-message" style="margin-bottom: 24px; color: var(--text-color); opacity: 0.8; font-size: 15px; line-height: 1.5;"></p>
+            <p id="custom-confirm-message"
+                style="margin-bottom: 24px; color: var(--text-color); opacity: 0.8; font-size: 15px; line-height: 1.5;">
+            </p>
             <div style="display: flex; gap: 12px;">
-                <button id="custom-confirm-cancel" class="btn-primary" style="flex: 1; background-color: #E8E8EA; color: var(--text-color);">Cancelar</button>
-                <button id="custom-confirm-accept" class="btn-primary" style="flex: 1; background-color: var(--alert);">Eliminar</button>
+                <button id="custom-confirm-cancel" class="btn-primary"
+                    style="flex: 1; background-color: #E8E8EA; color: var(--text-color);">Cancelar</button>
+                <button id="custom-confirm-accept" class="btn-primary"
+                    style="flex: 1; background-color: var(--alert);">Eliminar</button>
             </div>
         </div>
     </div>
