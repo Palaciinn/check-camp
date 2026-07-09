@@ -422,29 +422,37 @@ const UI = {
         this.bindEvents();
         this.startCountdown();
 
-        // Hide splash screen smoothly after avatars load
+        // Hide splash screen smoothly after avatars and videos load
         if (this.elements.appSplashScreen) {
             const avatarImgs = Array.from(this.elements.usersGrid.querySelectorAll('img'));
             
+            // Collect video URLs to preload
+            const videoUrls = usersList.map(u => {
+                const firstName = u.name ? u.name.split(' ')[0] : 'User';
+                return `videos/Video${firstName}.mp4`;
+            });
+
+            let loadedCount = 0;
+            const totalResources = avatarImgs.length + videoUrls.length;
+            let hasFired = false;
+
             const hideSplash = () => {
                 setTimeout(() => {
                     this.elements.appSplashScreen.classList.add('hidden');
                 }, 400); // Pequeño extra delay para asegurar render
             };
 
-            if (avatarImgs.length === 0) {
+            const checkDone = () => {
+                if (loadedCount >= totalResources && !hasFired) {
+                    hasFired = true;
+                    hideSplash();
+                }
+            };
+
+            if (totalResources === 0) {
                 hideSplash();
             } else {
-                let loadedCount = 0;
-                let hasFired = false;
-
-                const checkDone = () => {
-                    if (loadedCount >= avatarImgs.length && !hasFired) {
-                        hasFired = true;
-                        hideSplash();
-                    }
-                };
-
+                // Wait for avatars
                 avatarImgs.forEach(img => {
                     if (img.complete) {
                         loadedCount++;
@@ -453,16 +461,34 @@ const UI = {
                         img.addEventListener('error', () => { loadedCount++; checkDone(); }, { once: true });
                     }
                 });
+
+                // Preload videos hidden
+                videoUrls.forEach(url => {
+                    const v = document.createElement('video');
+                    v.preload = 'metadata'; // Solo cargar metadata para agilizar, pero asegurar que está en caché
+                    v.src = url;
+                    
+                    const onVideoReady = () => {
+                        loadedCount++;
+                        checkDone();
+                    };
+
+                    v.addEventListener('loadedmetadata', onVideoReady, { once: true });
+                    v.addEventListener('error', onVideoReady, { once: true }); // No bloquear si falla
+                    
+                    // Iniciar petición
+                    v.load();
+                });
                 
                 checkDone();
                 
-                // Fallback de seguridad (máximo 4 segundos)
+                // Fallback de seguridad (máximo 15 segundos para dar tiempo a recursos pesados)
                 setTimeout(() => {
                     if (!hasFired) {
                         hasFired = true;
                         hideSplash();
                     }
-                }, 4000);
+                }, 15000);
             }
         }
     },
