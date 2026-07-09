@@ -1,4 +1,4 @@
-const CACHE_NAME = "check-camp-v3";
+const CACHE_NAME = "check-camp-v4";
 const urlsToCache = [
   "./",
   "./index.html",

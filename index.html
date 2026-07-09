@@ -33,6 +33,15 @@
 
 <body>
 
+    <!-- Splash Screen (App Loader) -->
+    <div id="app-splash-screen" class="splash-screen">
+        <div class="splash-logo">
+            <span class="material-symbols-rounded splash-icon">camping</span>
+            <h1>Check<span class="text-accent">&</span>Camp</h1>
+        </div>
+        <div class="splash-spinner"></div>
+    </div>
+
     <!-- Login Overlay -->
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
@@ -149,6 +158,12 @@
                 <span class="placeholder-text" style="font-size: 13px; padding: 0;">Recuerdos compartidos</span>
             </div>
 
+            <!-- Sub-tabs -->
+            <div class="album-sub-tabs">
+                <button class="album-sub-tab active" data-tab="all">Todas</button>
+                <button class="album-sub-tab" data-tab="people">Personas</button>
+            </div>
+
             <input type="file" id="album-file-input" accept="image/*,video/*" multiple style="display: none;">
 
             <div id="album-upload-progress" class="album-upload-progress hidden">
@@ -158,11 +173,44 @@
                 <span id="album-upload-progress-text" class="progress-text" style="min-width: fit-content;">Subiendo 0/0</span>
             </div>
 
-            <div id="album-grid" class="album-grid"></div>
+            <!-- "Todas" View -->
+            <div id="album-view-all" class="album-view active">
+                <div class="album-sort-pills">
+                    <button class="sort-pill active" data-sort="recent">Recientes</button>
+                    <button class="sort-pill" data-sort="likes">Más likeadas</button>
+                </div>
+                <div id="album-grid" class="album-grid"></div>
+                <div id="album-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
+                    <span class="material-symbols-rounded" style="font-size: 48px; color: var(--text-color); opacity: 0.3; margin-bottom: 12px;">photo_library</span>
+                    <p class="placeholder-text" style="padding: 0;">Aún no hay recuerdos. ¡Sube la primera foto o vídeo!</p>
+                </div>
+            </div>
 
-            <div id="album-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
-                <span class="material-symbols-rounded" style="font-size: 48px; color: var(--text-color); opacity: 0.3; margin-bottom: 12px;">photo_library</span>
-                <p class="placeholder-text" style="padding: 0;">Aún no hay recuerdos. ¡Sube la primera foto o vídeo!</p>
+            <!-- "Personas" View -->
+            <div id="album-view-people" class="album-view">
+                <div id="album-people-grid" class="album-people-grid"></div>
+                <div id="album-people-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center;">
+                    <span class="material-symbols-rounded" style="font-size: 48px; color: var(--text-color); opacity: 0.3; margin-bottom: 12px;">group</span>
+                    <p class="placeholder-text" style="padding: 0;">Nadie ha subido recuerdos aún.</p>
+                </div>
+            </div>
+
+            <!-- Individual Person Detail View (Slide-in) -->
+            <div id="album-person-detail-view" class="album-detail-view">
+                <div class="album-detail-header">
+                    <button id="album-detail-back" style="background: none; border: none; color: var(--text-color); cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; margin-left: -8px;">
+                        <span class="material-symbols-rounded">arrow_back</span>
+                    </button>
+                    <div class="album-detail-user">
+                        <div id="album-detail-avatar" class="album-detail-avatar"></div>
+                        <h3 id="album-detail-name">Nombre</h3>
+                    </div>
+                </div>
+                <div class="album-sort-pills" style="margin-top: 24px;">
+                    <button class="sort-pill-detail active" data-sort="recent">Recientes</button>
+                    <button class="sort-pill-detail" data-sort="likes">Más likeadas</button>
+                </div>
+                <div id="album-detail-grid" class="album-grid"></div>
             </div>
         </section>
 
@@ -456,6 +504,39 @@
         </button>
 
         <div id="album-lightbox-counter" class="album-lightbox-counter"></div>
+
+        <!-- Interaction Panel -->
+        <div class="album-lightbox-bottom">
+            <div class="album-lightbox-interactions">
+                <button id="album-lightbox-like-btn" class="interaction-btn">
+                    <span class="material-symbols-rounded" id="album-lightbox-like-icon">favorite</span>
+                    <span id="album-lightbox-like-count">0</span>
+                </button>
+                <button id="album-lightbox-comment-btn" class="interaction-btn">
+                    <span class="material-symbols-rounded">chat_bubble</span>
+                    <span id="album-lightbox-comment-count">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Comments Panel -->
+        <div id="album-comments-panel" class="album-comments-panel hidden">
+            <div class="album-comments-header">
+                <h3>Comentarios</h3>
+                <button id="album-comments-close" class="album-lightbox-icon-btn" style="background: none;">
+                    <span class="material-symbols-rounded">expand_more</span>
+                </button>
+            </div>
+            <div id="album-comments-list" class="album-comments-list">
+                <!-- Comments injected here -->
+            </div>
+            <div class="album-comments-input-area">
+                <input type="text" id="album-comment-input" placeholder="Añade un comentario..." autocomplete="off">
+                <button id="album-comment-submit" class="album-comment-submit-btn">
+                    <span class="material-symbols-rounded">send</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>

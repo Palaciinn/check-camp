@@ -792,7 +792,7 @@ h3,
 .modal-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: 3000;
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
@@ -1232,4 +1232,550 @@ h3,
         width: 34px;
         height: 34px;
     }
+}
+
+/* ============================================
+   Album Likes & Comments
+   ============================================ */
+
+.album-lightbox-bottom {
+    position: absolute;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    right: 16px;
+    z-index: 3;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.album-lightbox-interactions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.interaction-btn {
+    background: rgba(0, 0, 0, 0.4);
+    border: none;
+    color: #FFF;
+    border-radius: 50px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.interaction-btn:active {
+    transform: scale(0.9);
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.interaction-btn .material-symbols-rounded {
+    font-size: 28px;
+}
+
+.interaction-btn span:not(.material-symbols-rounded) {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.interaction-btn.liked .material-symbols-rounded {
+    color: #FF3B30;
+    font-variation-settings: 'FILL' 1;
+    animation: heartPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes heartPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+}
+
+/* Comments Panel */
+.album-comments-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 65vh;
+    background: rgba(20, 20, 22, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 10;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+.album-comments-panel.hidden {
+    transform: translateY(100%);
+    pointer-events: none;
+    opacity: 1; /* override normal hidden */
+}
+
+.album-comments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.album-comments-header h3 {
+    color: #FFF;
+    margin: 0;
+    font-size: 18px;
+}
+
+.album-comments-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.comment-item {
+    display: flex;
+    gap: 12px;
+    transition: margin 0.3s ease;
+}
+
+.comment-reply {
+    margin-left: 36px;
+    position: relative;
+}
+
+.comment-reply::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: -12px;
+    width: 14px;
+    height: 24px;
+    border-left: 2px solid rgba(255, 255, 255, 0.15);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+    border-bottom-left-radius: 8px;
+    pointer-events: none;
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 50%;
+    background-color: var(--bg-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+    overflow: hidden;
+}
+
+.comment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comment-content {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px 14px;
+    border-radius: 16px;
+    border-top-left-radius: 4px;
+}
+
+.comment-author {
+    color: #FFF;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.comment-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.comment-date {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.comment-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.comment-action-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.comment-action-btn:active {
+    opacity: 0.7;
+}
+
+.comment-action-btn.delete-btn {
+    color: rgba(255, 59, 48, 0.8);
+}
+
+.album-comments-input-area {
+    padding: 12px 20px max(12px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+#album-comment-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 20px;
+    padding: 10px 16px;
+    color: #FFF;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+#album-comment-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.album-comment-submit-btn {
+    background: var(--primary);
+    border: none;
+    color: #FFF;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.album-comment-submit-btn:active {
+    transform: scale(0.9);
+}
+
+/* ============================================
+   Album Redesign (Tabs, Pills, People View)
+   ============================================ */
+
+.album-sub-tabs {
+    display: flex;
+    gap: 16px;
+    padding: 0 24px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.album-sub-tab {
+    background: none;
+    border: none;
+    padding: 12px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.5;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.album-sub-tab.active {
+    opacity: 1;
+}
+
+.album-sub-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary);
+    border-radius: 3px 3px 0 0;
+}
+
+.album-sort-pills {
+    display: flex;
+    gap: 8px;
+    padding: 0 24px;
+    margin-bottom: 16px;
+}
+
+.sort-pill, .sort-pill-detail {
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sort-pill.active, .sort-pill-detail.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #FFF;
+}
+
+.album-view {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.album-view.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.album-people-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 0 24px 24px 24px;
+}
+
+.album-person-card {
+    position: relative;
+    aspect-ratio: 3/4;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease;
+}
+
+.album-person-card:active {
+    transform: scale(0.96);
+}
+
+.album-person-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.album-person-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 16px;
+}
+
+.album-person-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--bg-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+
+.album-person-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.album-person-name {
+    color: #FFF;
+    font-weight: 700;
+    font-size: 15px;
+    margin: 0 0 2px 0;
+}
+
+.album-person-count {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    margin: 0;
+}
+
+.album-detail-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-color);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.album-detail-view.open {
+    transform: translateX(0);
+}
+
+.album-detail-header {
+    display: flex;
+    align-items: center;
+    padding: calc(env(safe-area-inset-top) + 16px) 16px 16px 16px;
+    background-color: var(--bg-color);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.album-detail-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: 8px;
+}
+
+.album-detail-avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.album-detail-user h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+#album-detail-grid {
+    padding: 0 16px 16px 16px;
+    overflow-y: auto;
+    flex: 1;
+    align-content: start;
+}
+
+/* ============================================
+   Splash Screen & Global Loaders
+   ============================================ */
+
+.splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background-color: var(--bg-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.splash-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    animation: pulseLogo 2s infinite ease-in-out;
+}
+
+.splash-icon {
+    font-size: 80px;
+    color: var(--primary);
+}
+
+.splash-logo h1 {
+    font-size: 32px;
+    margin: 0;
+    color: var(--text-color);
+    font-weight: 700;
+}
+
+@keyframes pulseLogo {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.splash-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(46, 125, 50, 0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.album-spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+    width: 100%;
+    grid-column: 1 / -1;
+    gap: 16px;
+}
+
+.album-spinner-container p {
+    color: var(--text-color);
+    opacity: 0.7;
+    font-size: 15px;
+    margin: 0;
 }

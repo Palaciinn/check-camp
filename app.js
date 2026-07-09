@@ -13,6 +13,10 @@ let selectedUser = null;
 let isSettingPassword = false;
 let rawItems = [];
 let albumMedia = [];
+let currentAlbumTab = 'all'; // 'all' | 'people'
+let currentAlbumSort = 'recent'; // 'recent' | 'likes'
+let currentPersonId = null;
+let currentPersonSort = 'recent';
 
 const DEFAULT_PERSONAL_ITEMS = [
     "Bañador",
@@ -202,12 +206,82 @@ const AlbumDB = {
             console.error('Error deleting media:', err.message);
             return false;
         }
+    },
+
+    async toggleLike(mediaId, userId, currentLikes = []) {
+        try {
+            const hasLiked = currentLikes.includes(userId);
+            let newLikes = [...currentLikes];
+            if (hasLiked) {
+                newLikes = newLikes.filter(id => id !== userId);
+            } else {
+                newLikes.push(userId);
+            }
+
+            const { data, error } = await supabaseClient
+                .from('album_media')
+                .update({ likes: newLikes })
+                .eq('id', mediaId)
+                .select();
+            
+            if (error) throw error;
+            if (!data || data.length === 0) throw new Error("No tienes permisos para dar like a esto. Revisa las políticas RLS.");
+            return { success: true, data: data[0] };
+        } catch (err) {
+            console.error('Error toggling like:', err.message);
+            return { success: false, errorMsg: err.message };
+        }
+    },
+
+    async addComment(mediaId, userId, text, currentComments = []) {
+        try {
+            const newComment = {
+                id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+                user_id: userId,
+                text: text,
+                created_at: new Date().toISOString()
+            };
+            const newComments = [...currentComments, newComment];
+
+            const { data, error } = await supabaseClient
+                .from('album_media')
+                .update({ comments: newComments })
+                .eq('id', mediaId)
+                .select();
+            
+            if (error) throw error;
+            if (!data || data.length === 0) throw new Error("No tienes permisos para comentar. Revisa las políticas RLS.");
+            return { success: true, data: data[0] };
+        } catch (err) {
+            console.error('Error adding comment:', err.message);
+            return { success: false, errorMsg: err.message };
+        }
+    },
+
+    async deleteComment(mediaId, commentId, currentComments = []) {
+        try {
+            const newComments = currentComments.filter(c => c.id !== commentId);
+
+            const { data, error } = await supabaseClient
+                .from('album_media')
+                .update({ comments: newComments })
+                .eq('id', mediaId)
+                .select();
+            
+            if (error) throw error;
+            if (!data || data.length === 0) throw new Error("No tienes permisos para borrar este comentario. Revisa las políticas RLS.");
+            return { success: true, data: data[0] };
+        } catch (err) {
+            console.error('Error deleting comment:', err.message);
+            return { success: false, errorMsg: err.message };
+        }
     }
 };
 
 // --- UI Logic ---
 const UI = {
     elements: {
+        appSplashScreen: document.getElementById('app-splash-screen'),
         overlay: document.getElementById('login-overlay'),
         usersGrid: document.getElementById('users-grid'),
         passwordInput: document.getElementById('user-password'),
@@ -251,6 +325,20 @@ const UI = {
         albumUploadProgressFill: document.getElementById('album-upload-progress-fill'),
         albumUploadProgressText: document.getElementById('album-upload-progress-text'),
 
+        // New Album Views
+        albumSubTabs: document.querySelectorAll('.album-sub-tab'),
+        albumViewAll: document.getElementById('album-view-all'),
+        albumViewPeople: document.getElementById('album-view-people'),
+        albumPeopleGrid: document.getElementById('album-people-grid'),
+        albumPeopleEmptyState: document.getElementById('album-people-empty-state'),
+        albumPersonDetailView: document.getElementById('album-person-detail-view'),
+        albumDetailBack: document.getElementById('album-detail-back'),
+        albumDetailAvatar: document.getElementById('album-detail-avatar'),
+        albumDetailName: document.getElementById('album-detail-name'),
+        albumDetailGrid: document.getElementById('album-detail-grid'),
+        sortPills: document.querySelectorAll('.sort-pill'),
+        sortPillsDetail: document.querySelectorAll('.sort-pill-detail'),
+
         // Album Lightbox
         albumLightbox: document.getElementById('album-lightbox'),
         albumLightboxStage: document.getElementById('album-lightbox-stage'),
@@ -262,7 +350,19 @@ const UI = {
         albumLightboxAvatar: document.getElementById('album-lightbox-avatar'),
         albumLightboxUsername: document.getElementById('album-lightbox-username'),
         albumLightboxDate: document.getElementById('album-lightbox-date'),
-        albumLightboxCounter: document.getElementById('album-lightbox-counter')
+        albumLightboxCounter: document.getElementById('album-lightbox-counter'),
+        
+        albumLightboxLikeBtn: document.getElementById('album-lightbox-like-btn'),
+        albumLightboxLikeIcon: document.getElementById('album-lightbox-like-icon'),
+        albumLightboxLikeCount: document.getElementById('album-lightbox-like-count'),
+        albumLightboxCommentBtn: document.getElementById('album-lightbox-comment-btn'),
+        albumLightboxCommentCount: document.getElementById('album-lightbox-comment-count'),
+        
+        albumCommentsPanel: document.getElementById('album-comments-panel'),
+        albumCommentsClose: document.getElementById('album-comments-close'),
+        albumCommentsList: document.getElementById('album-comments-list'),
+        albumCommentInput: document.getElementById('album-comment-input'),
+        albumCommentSubmit: document.getElementById('album-comment-submit'),
     },
 
     customAlert(message) {
@@ -321,6 +421,13 @@ const UI = {
         this.checkAuth();
         this.bindEvents();
         this.startCountdown();
+
+        // Hide splash screen smoothly
+        if (this.elements.appSplashScreen) {
+            setTimeout(() => {
+                this.elements.appSplashScreen.classList.add('hidden');
+            }, 500); // 500ms min delay for smooth effect
+        }
     },
 
     bindEvents() {
@@ -348,6 +455,63 @@ const UI = {
 
         if (this.elements.menuPagosBtn) {
             this.elements.menuPagosBtn.addEventListener('click', () => this.showSubSection('section-construction'));
+        }
+
+        // Album Redesign events
+        if (this.elements.albumSubTabs) {
+            this.elements.albumSubTabs.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.dataset.tab;
+                    currentAlbumTab = tab;
+                    
+                    // Update tab active state
+                    this.elements.albumSubTabs.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    // Toggle views
+                    if (this.elements.albumViewAll) {
+                        this.elements.albumViewAll.classList.toggle('active', tab === 'all');
+                    }
+                    if (this.elements.albumViewPeople) {
+                        this.elements.albumViewPeople.classList.toggle('active', tab === 'people');
+                    }
+
+                    // Render corresponding view
+                    if (tab === 'all') {
+                        this.renderAlbumGrid(albumMedia, this.elements.albumGrid, currentAlbumSort, this.elements.albumEmptyState);
+                    } else if (tab === 'people') {
+                        this.renderPeopleGrid();
+                    }
+                });
+            });
+        }
+
+        if (this.elements.sortPills) {
+            this.elements.sortPills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    this.elements.sortPills.forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    currentAlbumSort = pill.dataset.sort;
+                    this.renderAlbumGrid(albumMedia, this.elements.albumGrid, currentAlbumSort, this.elements.albumEmptyState);
+                });
+            });
+        }
+
+        if (this.elements.sortPillsDetail) {
+            this.elements.sortPillsDetail.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    this.elements.sortPillsDetail.forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    currentPersonSort = pill.dataset.sort;
+                    this.renderPersonDetail();
+                });
+            });
+        }
+
+        if (this.elements.albumDetailBack) {
+            this.elements.albumDetailBack.addEventListener('click', () => {
+                this.closePersonDetail();
+            });
         }
 
         // Album events
@@ -382,6 +546,35 @@ const UI = {
 
         if (this.elements.albumLightboxDelete) {
             this.elements.albumLightboxDelete.addEventListener('click', () => AlbumLightbox.deleteCurrent());
+        }
+
+        // Likes & Comments Interactions
+        if (this.elements.albumLightboxLikeBtn) {
+            this.elements.albumLightboxLikeBtn.addEventListener('click', () => AlbumLightbox.toggleLikeCurrent());
+        }
+
+        if (this.elements.albumLightboxCommentBtn) {
+            this.elements.albumLightboxCommentBtn.addEventListener('click', () => {
+                this.elements.albumCommentsPanel.classList.remove('hidden');
+            });
+        }
+
+        if (this.elements.albumCommentsClose) {
+            this.elements.albumCommentsClose.addEventListener('click', () => {
+                this.elements.albumCommentsPanel.classList.add('hidden');
+            });
+        }
+
+        if (this.elements.albumCommentSubmit) {
+            this.elements.albumCommentSubmit.addEventListener('click', () => AlbumLightbox.submitComment());
+        }
+
+        if (this.elements.albumCommentInput) {
+            this.elements.albumCommentInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    AlbumLightbox.submitComment();
+                }
+            });
         }
 
         if (this.elements.menuInstallBtn) {
@@ -813,11 +1006,11 @@ const UI = {
 
         // --- Preserve Expanded Accordeons ---
         const expandedNames = new Set();
-        const existingHeaders = container.querySelectorAll('.mypack-item.accordion-header');
-        existingHeaders.forEach(header => {
-            const content = header.nextElementSibling;
-            if (content && content.classList.contains('expanded')) {
-                const nameSpan = header.querySelector('.mypack-name');
+        const expandedContents = container.querySelectorAll('.accordion-content.expanded');
+        expandedContents.forEach(content => {
+            const prevSibling = content.previousElementSibling;
+            if (prevSibling) {
+                const nameSpan = prevSibling.querySelector('.mypack-name');
                 if (nameSpan) {
                     const baseName = nameSpan.textContent.split(' (')[0];
                     expandedNames.add(baseName);
@@ -926,16 +1119,24 @@ const UI = {
         // --- Preserve Expanded Accordeons ---
         const expandedNames = new Set();
         const existingHeaders = container.querySelectorAll('.mypack-item.accordion-header');
-        existingHeaders.forEach(header => {
-            const content = header.nextElementSibling;
-            if (content && content.classList.contains('expanded')) {
-                const nameSpan = header.querySelector('.mypack-name');
-                if (nameSpan) {
-                    const baseName = nameSpan.textContent.split(' (')[0];
-                    expandedNames.add(baseName);
+        
+        if (existingHeaders.length === 0) {
+            // First time render: expand by default
+            expandedNames.add('Lista General');
+            expandedNames.add('Lista Personal');
+        } else {
+            const expandedContents = container.querySelectorAll('.accordion-content.expanded');
+            expandedContents.forEach(content => {
+                const prevSibling = content.previousElementSibling;
+                if (prevSibling) {
+                    const nameSpan = prevSibling.querySelector('.mypack-name');
+                    if (nameSpan) {
+                        const baseName = nameSpan.textContent.split(' (')[0];
+                        expandedNames.add(baseName);
+                    }
                 }
-            }
-        });
+            });
+        }
 
         container.innerHTML = '';
 
@@ -957,10 +1158,11 @@ const UI = {
 
         const header = document.createElement('div');
         header.className = 'mypack-item accordion-header';
-        header.style.backgroundColor = 'var(--background-color)';
-        header.style.border = '1px solid var(--border-color)';
+        header.style.backgroundColor = '#FFFFFF';
+        header.style.border = 'none';
         header.style.borderRadius = '12px';
         header.style.marginBottom = '8px';
+        header.style.boxShadow = '0 2px 8px rgba(44, 44, 46, 0.04)';
 
         const info = document.createElement('div');
         info.className = 'mypack-info';
@@ -1280,11 +1482,11 @@ const UI = {
 
         // --- Preserve Expanded Accordeons ---
         const expandedNames = new Set();
-        const existingHeaders = container.querySelectorAll('.item-cell.accordion-header');
-        existingHeaders.forEach(header => {
-            const content = header.nextElementSibling;
-            if (content && content.classList.contains('expanded')) {
-                const nameSpan = header.querySelector('.item-name');
+        const expandedContents = container.querySelectorAll('.accordion-content.expanded');
+        expandedContents.forEach(content => {
+            const prevSibling = content.previousElementSibling;
+            if (prevSibling) {
+                const nameSpan = prevSibling.querySelector('.item-name');
                 if (nameSpan) {
                     const baseName = nameSpan.textContent.split(' (')[0];
                     expandedNames.add(baseName);
@@ -1588,27 +1790,137 @@ const UI = {
     // --- Album ---
     async loadAlbum() {
         if (this.elements.albumGrid) {
-            this.elements.albumGrid.innerHTML = '<p class="placeholder-text">Cargando recuerdos...</p>';
+            this.elements.albumGrid.innerHTML = `
+                <div class="album-spinner-container">
+                    <div class="splash-spinner"></div>
+                    <p>Preparando recuerdos...</p>
+                </div>
+            `;
         }
         albumMedia = await AlbumDB.fetchMedia();
         this.renderAlbumGrid();
     },
 
-    renderAlbumGrid() {
-        const grid = this.elements.albumGrid;
-        if (!grid) return;
-        grid.innerHTML = '';
+    renderAlbumGrid(mediaArray = albumMedia, gridElement = this.elements.albumGrid, sortType = currentAlbumSort, emptyStateElement = this.elements.albumEmptyState) {
+        if (!gridElement) return;
+        gridElement.innerHTML = '';
 
-        if (this.elements.albumEmptyState) {
-            this.elements.albumEmptyState.style.display = albumMedia.length === 0 ? 'flex' : 'none';
+        if (emptyStateElement) {
+            emptyStateElement.style.display = mediaArray.length === 0 ? 'flex' : 'none';
         }
 
-        albumMedia.forEach((media, index) => {
-            grid.appendChild(this.createAlbumThumbnail(media, index));
+        // Sort media
+        let sortedMedia = [...mediaArray];
+        if (sortType === 'likes') {
+            sortedMedia.sort((a, b) => {
+                const aLikes = a.likes ? a.likes.length : 0;
+                const bLikes = b.likes ? b.likes.length : 0;
+                if (bLikes !== aLikes) return bLikes - aLikes;
+                // fallback to recent
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+        } else {
+            // default is recent (already sorted by fetchMedia, but we re-sort to be sure)
+            sortedMedia.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        sortedMedia.forEach((media, index) => {
+            gridElement.appendChild(this.createAlbumThumbnail(media, index, sortedMedia));
         });
     },
 
-    createAlbumThumbnail(media, index) {
+    renderPeopleGrid() {
+        if (!this.elements.albumPeopleGrid) return;
+        const grid = this.elements.albumPeopleGrid;
+        grid.innerHTML = '';
+        
+        // Group by uploaded_by
+        const usersMedia = {};
+        albumMedia.forEach(media => {
+            if (!usersMedia[media.uploaded_by]) {
+                usersMedia[media.uploaded_by] = [];
+            }
+            usersMedia[media.uploaded_by].push(media);
+        });
+
+        const activeUserIds = Object.keys(usersMedia);
+        
+        if (this.elements.albumPeopleEmptyState) {
+            this.elements.albumPeopleEmptyState.style.display = activeUserIds.length === 0 ? 'flex' : 'none';
+        }
+
+        activeUserIds.forEach(userId => {
+            const mediaList = usersMedia[userId];
+            // sort by recent to get cover
+            mediaList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            const coverMedia = mediaList[0];
+            const uploader = usersList.find(u => String(u.id) === String(userId));
+            const firstName = uploader && uploader.name ? uploader.name.split(' ')[0] : 'Alguien';
+
+            const card = document.createElement('div');
+            card.className = 'album-person-card';
+            card.onclick = () => this.openPersonDetail(userId);
+
+            const coverUrl = AlbumDB.getPublicUrl(coverMedia.file_path);
+
+            card.innerHTML = `
+                ${coverMedia.file_type === 'video' ? 
+                    `<video src="${coverUrl}#t=0.1" class="album-person-cover" preload="metadata" muted playsinline></video>` : 
+                    `<img src="${coverUrl}" loading="lazy" class="album-person-cover" alt="Portada de ${firstName}">`
+                }
+                <div class="album-person-overlay">
+                    <div class="album-person-avatar">
+                        <img src="avatars/Avatar${firstName}.png" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';">
+                    </div>
+                    <h4 class="album-person-name">${firstName}</h4>
+                    <p class="album-person-count">${mediaList.length} foto${mediaList.length > 1 ? 's' : ''}</p>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    },
+
+    openPersonDetail(userId) {
+        currentPersonId = String(userId);
+        currentPersonSort = 'recent'; // reset sort
+        
+        const uploader = usersList.find(u => String(u.id) === currentPersonId);
+        const firstName = uploader && uploader.name ? uploader.name.split(' ')[0] : 'Alguien';
+        
+        if (this.elements.albumDetailName) {
+            this.elements.albumDetailName.textContent = firstName;
+        }
+        if (this.elements.albumDetailAvatar) {
+            this.elements.albumDetailAvatar.innerHTML = `<img src="avatars/Avatar${firstName}.png" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';" style="width:100%;height:100%;object-fit:cover;">`;
+        }
+
+        // Reset pills
+        if (this.elements.sortPillsDetail) {
+            this.elements.sortPillsDetail.forEach(p => p.classList.remove('active'));
+            this.elements.sortPillsDetail[0].classList.add('active'); // Recientes
+        }
+
+        this.renderPersonDetail();
+        
+        if (this.elements.albumPersonDetailView) {
+            this.elements.albumPersonDetailView.classList.add('open');
+        }
+    },
+
+    closePersonDetail() {
+        if (this.elements.albumPersonDetailView) {
+            this.elements.albumPersonDetailView.classList.remove('open');
+        }
+        currentPersonId = null;
+    },
+
+    renderPersonDetail() {
+        if (!currentPersonId || !this.elements.albumDetailGrid) return;
+        const mediaList = albumMedia.filter(m => String(m.uploaded_by) === currentPersonId);
+        this.renderAlbumGrid(mediaList, this.elements.albumDetailGrid, currentPersonSort, null);
+    },
+
+    createAlbumThumbnail(media, index, mediaArray = albumMedia) {
         const item = document.createElement('div');
         item.className = 'album-item';
 
@@ -1650,7 +1962,7 @@ const UI = {
             item.appendChild(avatarBadge);
         }
 
-        item.addEventListener('click', () => AlbumLightbox.open(index));
+        item.addEventListener('click', () => AlbumLightbox.open(index, mediaArray));
 
         return item;
     },
@@ -1739,8 +2051,11 @@ const AlbumLightbox = {
     lastTapY: 0,
     boundInit: false,
 
-    open(index) {
-        if (!albumMedia.length) return;
+    currentMediaArray: [],
+    
+    open(index, mediaArray = albumMedia) {
+        this.currentMediaArray = mediaArray;
+        if (!this.currentMediaArray.length) return;
         this.index = index;
         this.resetZoom();
         UI.elements.albumLightbox.classList.remove('hidden');
@@ -1781,7 +2096,7 @@ const AlbumLightbox = {
     },
 
     renderSlide() {
-        const media = albumMedia[this.index];
+        const media = this.currentMediaArray[this.index];
         if (!media) return;
 
         const wrap = UI.elements.albumLightboxMediaWrap;
@@ -1842,20 +2157,222 @@ const AlbumLightbox = {
                 (selectedUser && media.uploaded_by === selectedUser.id) ? 'flex' : 'none';
         }
 
+        const mediaCount = this.currentMediaArray.length;
         if (UI.elements.albumLightboxCounter) {
-            UI.elements.albumLightboxCounter.textContent = `${this.index + 1} / ${albumMedia.length}`;
+            UI.elements.albumLightboxCounter.textContent = `${this.index + 1} de ${mediaCount}`;
         }
-
         if (UI.elements.albumLightboxPrev) {
             UI.elements.albumLightboxPrev.style.visibility = this.index === 0 ? 'hidden' : 'visible';
         }
         if (UI.elements.albumLightboxNext) {
-            UI.elements.albumLightboxNext.style.visibility = this.index === albumMedia.length - 1 ? 'hidden' : 'visible';
+            UI.elements.albumLightboxNext.style.visibility = this.index === mediaCount - 1 ? 'hidden' : 'visible';
+        }
+
+        this.renderLikes();
+        this.renderComments();
+    },
+
+    renderLikes() {
+        const media = this.currentMediaArray[this.index];
+        if (!media) return;
+
+        const likes = media.likes || [];
+        const hasLiked = selectedUser ? likes.includes(selectedUser.id) : false;
+
+        if (UI.elements.albumLightboxLikeCount) {
+            UI.elements.albumLightboxLikeCount.textContent = likes.length;
+        }
+
+        if (UI.elements.albumLightboxLikeBtn) {
+            if (hasLiked) {
+                UI.elements.albumLightboxLikeBtn.classList.add('liked');
+            } else {
+                UI.elements.albumLightboxLikeBtn.classList.remove('liked');
+            }
         }
     },
 
+    renderComments() {
+        const media = this.currentMediaArray[this.index];
+        if (!media || !UI.elements.albumCommentsList) return;
+
+        const comments = media.comments || [];
+        
+        if (UI.elements.albumLightboxCommentCount) {
+            UI.elements.albumLightboxCommentCount.textContent = comments.length;
+        }
+
+        UI.elements.albumCommentsList.innerHTML = '';
+        
+        if (comments.length === 0) {
+            UI.elements.albumCommentsList.innerHTML = '<p class="placeholder-text" style="margin: auto; font-size: 14px; color: rgba(255,255,255,0.5);">No hay comentarios aún. ¡Sé el primero!</p>';
+            return;
+        }
+
+        comments.forEach(comment => {
+            const user = usersList.find(u => u.id === comment.user_id);
+            const firstName = user && user.name ? user.name.split(' ')[0] : 'Alguien';
+            
+            const commentEl = document.createElement('div');
+            commentEl.className = 'comment-item';
+            
+            // Check if it's a reply (starts with @)
+            if (comment.text.trim().startsWith('@')) {
+                commentEl.classList.add('comment-reply');
+            }
+            
+            // Avatar
+            const avatarHtml = user ? 
+                `<img src="avatars/Avatar${firstName}.png" alt="${firstName}" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';">` :
+                firstName.charAt(0).toUpperCase();
+
+            // Date formatting
+            const d = new Date(comment.created_at);
+            const dateStr = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+            
+            const isMine = selectedUser && comment.user_id === selectedUser.id;
+
+            let actionsHtml = `
+                <div class="comment-actions">
+                    <button class="comment-action-btn" onclick="AlbumLightbox.replyToComment('${firstName}')">Responder</button>
+                    ${isMine ? `<button class="comment-action-btn delete-btn" onclick="AlbumLightbox.deleteComment('${comment.id}')">Borrar</button>` : ''}
+                </div>
+            `;
+
+            commentEl.innerHTML = `
+                <div class="comment-avatar">
+                    ${avatarHtml}
+                </div>
+                <div class="comment-content">
+                    <div class="comment-author">${firstName}</div>
+                    <div class="comment-text">${comment.text}</div>
+                    <div class="comment-footer">
+                        <span class="comment-date">${dateStr}</span>
+                        ${actionsHtml}
+                    </div>
+                </div>
+            `;
+            UI.elements.albumCommentsList.appendChild(commentEl);
+        });
+
+        // Scroll to bottom
+        UI.elements.albumCommentsList.scrollTop = UI.elements.albumCommentsList.scrollHeight;
+    },
+
+    replyToComment(username) {
+        const input = UI.elements.albumCommentInput;
+        if (!input) return;
+        
+        input.value = `@${username} ` + input.value;
+        input.focus();
+    },
+
+    async deleteComment(commentId) {
+        if (!selectedUser) return;
+        
+        const media = this.currentMediaArray[this.index];
+        if (!media) return;
+
+        const confirmed = await UI.customConfirm('¿Seguro que quieres borrar este comentario?');
+        if (!confirmed) return;
+
+        const comments = media.comments || [];
+        
+        // Optimistic update
+        media.comments = comments.filter(c => c.id !== commentId);
+        this.renderComments();
+
+        // DB update
+        const result = await AlbumDB.deleteComment(media.id, commentId, comments);
+        
+        if (result.success) {
+            this.currentMediaArray[this.index].comments = result.data.comments;
+        } else {
+            // Revert on failure
+            media.comments = comments;
+            this.renderComments();
+            UI.customAlert("Error al borrar el comentario: " + result.errorMsg);
+        }
+    },
+
+    async toggleLikeCurrent() {
+        if (!selectedUser) {
+            UI.customAlert("Debes iniciar sesión para dar like.");
+            return;
+        }
+
+        const media = this.currentMediaArray[this.index];
+        if (!media) return;
+
+        // Optimistic UI update
+        const likes = media.likes || [];
+        const hasLiked = likes.includes(selectedUser.id);
+        
+        if (hasLiked) {
+            media.likes = likes.filter(id => id !== selectedUser.id);
+        } else {
+            media.likes = [...likes, selectedUser.id];
+        }
+        this.renderLikes();
+
+        // Perform actual request
+        const result = await AlbumDB.toggleLike(media.id, selectedUser.id, likes);
+        
+        if (result.success) {
+            this.currentMediaArray[this.index].likes = result.data.likes;
+        } else {
+            // Revert on failure
+            media.likes = likes;
+            this.renderLikes();
+            UI.customAlert("Error: " + result.errorMsg);
+        }
+    },
+
+    async submitComment() {
+        if (!selectedUser) {
+            UI.customAlert("Debes iniciar sesión para comentar.");
+            return;
+        }
+
+        const media = this.currentMediaArray[this.index];
+        const input = UI.elements.albumCommentInput;
+        if (!media || !input) return;
+
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        input.disabled = true;
+
+        const comments = media.comments || [];
+        
+        // Optimistic update
+        const newComment = {
+            user_id: selectedUser.id,
+            text: text,
+            created_at: new Date().toISOString()
+        };
+        media.comments = [...comments, newComment];
+        this.renderComments();
+
+        // DB update
+        const result = await AlbumDB.addComment(media.id, selectedUser.id, text, comments);
+        
+        if (result.success) {
+            this.currentMediaArray[this.index].comments = result.data.comments;
+        } else {
+            // Revert on failure
+            media.comments = comments;
+            this.renderComments();
+            UI.customAlert("Error: " + result.errorMsg);
+        }
+        
+        input.disabled = false;
+        input.focus();
+    },
+
     async deleteCurrent() {
-        const media = albumMedia[this.index];
+        const media = this.currentMediaArray[this.index];
         if (!media) return;
 
         const confirmed = await UI.customConfirm('¿Seguro que quieres borrar este recuerdo? Esta acción no se puede deshacer.');
@@ -1863,12 +2380,19 @@ const AlbumLightbox = {
 
         const success = await AlbumDB.deleteMedia(media.id, media.file_path);
         if (success) {
-            albumMedia.splice(this.index, 1);
-            UI.renderAlbumGrid();
-            if (albumMedia.length === 0) {
+            this.currentMediaArray.splice(this.index, 1);
+            if (this.currentMediaArray !== albumMedia) {
+                const globalIndex = albumMedia.findIndex(m => m.id === media.id);
+                if (globalIndex !== -1) albumMedia.splice(globalIndex, 1);
+            }
+            UI.renderAlbumGrid(albumMedia, UI.elements.albumGrid, currentAlbumSort);
+            if (currentPersonId) {
+                UI.renderPersonDetail(currentPersonId);
+            }
+            if (this.currentMediaArray.length === 0) {
                 this.close();
             } else {
-                this.index = Math.min(this.index, albumMedia.length - 1);
+                this.index = Math.min(this.index, this.currentMediaArray.length - 1);
                 this.resetZoom();
                 this.renderSlide();
             }
