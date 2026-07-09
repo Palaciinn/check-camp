@@ -1758,6 +1758,47 @@ h3,
     animation: spin 1s linear infinite;
 }
 
+.splash-progress-container {
+    width: 80%;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.splash-message {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-color);
+    opacity: 0.8;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.splash-progress-bar-bg {
+    width: 100%;
+    height: 6px;
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.splash-progress-bar-fill {
+    width: 0%;
+    height: 100%;
+    background-color: var(--primary);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.splash-progress-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    margin: 0;
+}
+
 @keyframes spin {
     to { transform: rotate(360deg); }
 }

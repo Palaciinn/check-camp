@@ -39,7 +39,14 @@
             <span class="material-symbols-rounded splash-icon">camping</span>
             <h1>Check<span class="text-accent">&</span>Camp</h1>
         </div>
-        <div class="splash-spinner"></div>
+        
+        <div class="splash-progress-container">
+            <p class="splash-message">Se están descargando los recursos de la app. Esta primera carga puede tardar unos minutos.</p>
+            <div class="splash-progress-bar-bg">
+                <div id="splash-progress-bar" class="splash-progress-bar-fill"></div>
+            </div>
+            <p id="splash-progress-text" class="splash-progress-text">0%</p>
+        </div>
     </div>
 
     <!-- Login Overlay -->

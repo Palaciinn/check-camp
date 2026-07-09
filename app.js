@@ -437,13 +437,20 @@ const UI = {
             const totalResources = avatarImgs.length + videoUrls.length;
             let hasFired = false;
 
+            const splashProgressBar = document.getElementById('splash-progress-bar');
+            const splashProgressText = document.getElementById('splash-progress-text');
+
             const hideSplash = () => {
                 setTimeout(() => {
                     this.elements.appSplashScreen.classList.add('hidden');
                 }, 400); // Extra delay for rendering
             };
 
-            const checkDone = () => {
+            const updateProgress = () => {
+                const percentage = totalResources > 0 ? Math.floor((loadedCount / totalResources) * 100) : 100;
+                if (splashProgressBar) splashProgressBar.style.width = `${percentage}%`;
+                if (splashProgressText) splashProgressText.textContent = `${percentage}%`;
+                
                 if (loadedCount >= totalResources && !hasFired) {
                     hasFired = true;
                     hideSplash();
@@ -457,35 +464,28 @@ const UI = {
                 avatarImgs.forEach(img => {
                     if (img.complete) {
                         loadedCount++;
+                        updateProgress();
                     } else {
-                        img.addEventListener('load', () => { loadedCount++; checkDone(); }, { once: true });
-                        img.addEventListener('error', () => { loadedCount++; checkDone(); }, { once: true });
+                        img.addEventListener('load', () => { loadedCount++; updateProgress(); }, { once: true });
+                        img.addEventListener('error', () => { loadedCount++; updateProgress(); }, { once: true });
                     }
                 });
 
-                // 2. Preload videos forcing HTTP cache (bypasses mobile video preload restrictions)
+                // 2. Preload videos forcing HTTP cache
                 videoUrls.forEach(url => {
                     fetch(url, { mode: 'no-cors', cache: 'force-cache' })
                         .then(() => {
                             loadedCount++;
-                            checkDone();
+                            updateProgress();
                         })
                         .catch(() => {
                             // On error, just continue so we don't block
                             loadedCount++;
-                            checkDone();
+                            updateProgress();
                         });
                 });
                 
-                checkDone();
-                
-                // Fallback (máximo 15 segundos)
-                setTimeout(() => {
-                    if (!hasFired) {
-                        hasFired = true;
-                        hideSplash();
-                    }
-                }, 15000);
+                updateProgress();
             }
         }
     },
