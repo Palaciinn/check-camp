@@ -425,12 +425,13 @@ const UI = {
         // Hide splash screen smoothly after avatars and videos load
         if (this.elements.appSplashScreen) {
             const avatarImgs = Array.from(this.elements.usersGrid.querySelectorAll('img'));
+            const isLoginScreen = avatarImgs.length > 0;
             
-            // Collect video URLs to preload
-            const videoUrls = usersList.map(u => {
+            // Only preload videos if we are on the login screen
+            const videoUrls = isLoginScreen ? usersList.map(u => {
                 const firstName = u.name ? u.name.split(' ')[0] : 'User';
                 return `videos/Video${firstName}.mp4`;
-            });
+            }) : [];
 
             let loadedCount = 0;
             const totalResources = avatarImgs.length + videoUrls.length;
@@ -439,7 +440,7 @@ const UI = {
             const hideSplash = () => {
                 setTimeout(() => {
                     this.elements.appSplashScreen.classList.add('hidden');
-                }, 400); // Pequeño extra delay para asegurar render
+                }, 400); // Extra delay for rendering
             };
 
             const checkDone = () => {
@@ -452,7 +453,7 @@ const UI = {
             if (totalResources === 0) {
                 hideSplash();
             } else {
-                // Wait for avatars
+                // 1. Wait for avatars
                 avatarImgs.forEach(img => {
                     if (img.complete) {
                         loadedCount++;
@@ -462,27 +463,23 @@ const UI = {
                     }
                 });
 
-                // Preload videos hidden
+                // 2. Preload videos forcing HTTP cache (bypasses mobile video preload restrictions)
                 videoUrls.forEach(url => {
-                    const v = document.createElement('video');
-                    v.preload = 'metadata'; // Solo cargar metadata para agilizar, pero asegurar que está en caché
-                    v.src = url;
-                    
-                    const onVideoReady = () => {
-                        loadedCount++;
-                        checkDone();
-                    };
-
-                    v.addEventListener('loadedmetadata', onVideoReady, { once: true });
-                    v.addEventListener('error', onVideoReady, { once: true }); // No bloquear si falla
-                    
-                    // Iniciar petición
-                    v.load();
+                    fetch(url, { mode: 'no-cors', cache: 'force-cache' })
+                        .then(() => {
+                            loadedCount++;
+                            checkDone();
+                        })
+                        .catch(() => {
+                            // On error, just continue so we don't block
+                            loadedCount++;
+                            checkDone();
+                        });
                 });
                 
                 checkDone();
                 
-                // Fallback de seguridad (máximo 15 segundos para dar tiempo a recursos pesados)
+                // Fallback (máximo 15 segundos)
                 setTimeout(() => {
                     if (!hasFired) {
                         hasFired = true;
