@@ -814,7 +814,7 @@ const UI = {
 
             const img = document.createElement('img');
             img.className = 'user-avatar-img';
-            img.src = `avatars/Avatar${firstName}.png`;
+            img.src = `avatars/Avatar${firstName}.webp`;
             img.alt = user.name;
 
             img.onerror = () => {
@@ -1680,7 +1680,7 @@ const UI = {
             btn.style.border = 'none';
             const firstName = claimingUser.name.split(' ')[0];
             const img = document.createElement('img');
-            img.src = `avatars/Avatar${firstName}.png`;
+            img.src = `avatars/Avatar${firstName}.webp`;
             img.alt = firstName;
             img.onerror = () => {
                 img.style.display = 'none';
@@ -1930,7 +1930,7 @@ const UI = {
                 }
                 <div class="album-person-overlay">
                     <div class="album-person-avatar">
-                        <img src="avatars/Avatar${firstName}.png" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';">
+                        <img src="avatars/Avatar${firstName}.webp" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';">
                     </div>
                     <h4 class="album-person-name">${firstName}</h4>
                     <p class="album-person-count">${mediaList.length} foto${mediaList.length > 1 ? 's' : ''}</p>
@@ -1951,7 +1951,7 @@ const UI = {
             this.elements.albumDetailName.textContent = firstName;
         }
         if (this.elements.albumDetailAvatar) {
-            this.elements.albumDetailAvatar.innerHTML = `<img src="avatars/Avatar${firstName}.png" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';" style="width:100%;height:100%;object-fit:cover;">`;
+            this.elements.albumDetailAvatar.innerHTML = `<img src="avatars/Avatar${firstName}.webp" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';" style="width:100%;height:100%;object-fit:cover;">`;
         }
 
         // Reset pills
@@ -2012,7 +2012,7 @@ const UI = {
             avatarBadge.className = 'album-item-avatar';
             const firstName = uploader.name ? uploader.name.split(' ')[0] : 'User';
             const avatarImg = document.createElement('img');
-            avatarImg.src = `avatars/Avatar${firstName}.png`;
+            avatarImg.src = `avatars/Avatar${firstName}.webp`;
             avatarImg.alt = firstName;
             avatarImg.onerror = () => {
                 avatarImg.style.display = 'none';
@@ -2191,7 +2191,7 @@ const AlbumLightbox = {
             if (nameEl) nameEl.textContent = firstName;
             if (avatarEl) {
                 const img = document.createElement('img');
-                img.src = `avatars/Avatar${firstName}.png`;
+                img.src = `avatars/Avatar${firstName}.webp`;
                 img.alt = firstName;
                 img.onerror = () => {
                     img.style.display = 'none';
@@ -2283,7 +2283,7 @@ const AlbumLightbox = {
             
             // Avatar
             const avatarHtml = user ? 
-                `<img src="avatars/Avatar${firstName}.png" alt="${firstName}" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';">` :
+                `<img src="avatars/Avatar${firstName}.webp" alt="${firstName}" onerror="this.style.display='none'; this.parentElement.textContent='${firstName.charAt(0).toUpperCase()}';">` :
                 firstName.charAt(0).toUpperCase();
 
             // Date formatting
